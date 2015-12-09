@@ -47,7 +47,7 @@ abstract class AmazonProductsCore extends AmazonCore{
         if (file_exists($this->config)){
             include($this->config);
         } else {
-            throw new Exception('Config file does not exist!');
+            throw new \Exception('Config file does not exist!');
         }
         
         if(isset($AMAZON_VERSION_PRODUCTS)){

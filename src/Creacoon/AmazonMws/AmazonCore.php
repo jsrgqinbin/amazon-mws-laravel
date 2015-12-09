@@ -362,7 +362,7 @@ abstract class AmazonCore{
         if (isset($AMAZON_SERVICE_URL)){
             $this->urlbase = $AMAZON_SERVICE_URL;
         } else {
-            throw new Exception("Config file does not exist or cannot be read!");
+            throw new \Exception("Config file does not exist or cannot be read!");
         }
     }
     
@@ -748,9 +748,8 @@ abstract class AmazonCore{
         $stringToSign = null;
         if (2 === $this->options['SignatureVersion']) {
             $stringToSign = $this->_calculateStringToSignV2($parameters);
-//            var_dump($stringToSign);
         } else {
-            throw new Exception("Invalid Signature Version specified");
+            throw new \Exception("Invalid Signature Version specified");
         }
         return $this->_sign($stringToSign, $key, $algorithm);
     }

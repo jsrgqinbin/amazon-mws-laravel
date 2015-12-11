@@ -341,6 +341,4 @@ class AmazonReportScheduleManager extends AmazonReportsCore implements \Iterator
     public function valid() {
         return isset($this->scheduleList[$this->i]);
     }
-    
 }
-?>

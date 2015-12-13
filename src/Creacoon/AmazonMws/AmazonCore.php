@@ -429,12 +429,14 @@ abstract class AmazonCore
                 $MARKETPLACE_ID = array_get($accountTokenData, 'MARKETPLACE_ID');
                 $AWS_ACCESS_KEY_ID = array_get($accountTokenData, 'AWS_ACCESS_KEY_ID');
                 $AWS_SECRET_ACCESS_KEY = array_get($accountTokenData, 'AWS_SECRET_ACCESS_KEY');
+                $MWS_TOKEN = array_get($accountTokenData, 'MWS_TOKEN',$AWS_SECRET_ACCESS_KEY);
                 $COUNTRY_CODE = $accountModel->country_code;
                 $configData = [
                     'merchantId' => $MERCHANT_ID,
                     'marketplaceId' => $MARKETPLACE_ID,
                     'keyId' => $AWS_ACCESS_KEY_ID,
                     'secretKey' => $AWS_SECRET_ACCESS_KEY,
+                    'MWSAuthToken' => $MWS_TOKEN,
                     'countryCode' => $COUNTRY_CODE
                 ];
                 $this->storeConfig = $configData;
@@ -478,6 +480,11 @@ abstract class AmazonCore
             $this->options['AWSAccessKeyId'] = $this->storeConfig['keyId'];
         } else {
             $this->log("Access Key ID is missing!", 'Warning');
+        }
+        if (array_key_exists('MWSAuthToken', $this->storeConfig)) {
+            $this->options['MWSAuthToken'] = $this->storeConfig['MWSAuthToken'];
+        } else {
+            $this->log("MWSAuthToken is missing!", 'Warning');
         }
         if (!array_key_exists('secretKey', $this->storeConfig)) {
             $this->log("Secret Key is missing!", 'Warning');

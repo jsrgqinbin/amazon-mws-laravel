@@ -106,7 +106,6 @@ class AmazonReport extends AmazonReportsCore{
             
             $this->rawreport = $response['body'];
         }
-        
     }
     
     /**
@@ -124,6 +123,16 @@ class AmazonReport extends AmazonReportsCore{
             $this->log("Unable to save report #".$this->options['ReportId']." at $path: $e",'Urgent');
         }
     }
-    
+
+    /**
+     * get report data
+     *
+     * @return bool
+     */
+    public function getReportData(){
+        if (!isset($this->rawreport)){
+            return false;
+        }
+        return $this->rawreport;
+    }
 }
-?>

@@ -50,16 +50,10 @@ class AmazonOrderList extends AmazonOrderCore implements \Iterator{
     public function __construct($s, $mock = false, $m = null, $config = null){
         parent::__construct($s, $mock, $m, $config);
         include($this->env);
-        // if (file_exists($this->config)){
-        //     include($this->config);
-        // } else {
-        //     throw new \Exception('Config file does not exist!');
-        // }
 
-        $store = Config::get('amazon-mws.store');
-        
-        if(isset($store[$s]) && array_key_exists('marketplaceId', $store[$s])){
-            $this->options['MarketplaceId.Id.1'] = $store[$s]['marketplaceId'];
+
+        if(array_key_exists('marketplaceId', $this->storeConfig)){
+            $this->options['MarketplaceId.Id.1'] = $this->storeConfig['marketplaceId'];
         } else {
             $this->log("Marketplace ID is missing",'Urgent');
         }

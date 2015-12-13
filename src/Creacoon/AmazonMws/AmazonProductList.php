@@ -123,16 +123,15 @@ class AmazonProductList extends AmazonProductsCore implements \Iterator{
         $url = $this->urlbase.$this->urlbranch;
         
         $query = $this->genQuery();
-        
+
         if ($this->mockMode){
            $xml = $this->fetchMockFile();
         } else {
             $response = $this->sendRequest($url, array('Post'=>$query));
-            
+
             if (!$this->checkResponse($response)){
                 return false;
             }
-            
             $xml = simplexml_load_string($response['body']);
         }
         
@@ -176,6 +175,4 @@ class AmazonProductList extends AmazonProductsCore implements \Iterator{
     public function valid() {
         return isset($this->productList[$this->i]);
     }
-    
 }
-?>

@@ -293,7 +293,7 @@ class AmazonProduct extends AmazonProductsCore{
      * See <i>getData</i>.
      * @return array Huge array of Product data.
      */
-    public function getProduct(){
+    public function getProduct($num = NULL){
         return $this->getData();
     }
     
@@ -311,6 +311,4 @@ class AmazonProduct extends AmazonProductsCore{
             return false;
         }
     }
-    
 }
-?>

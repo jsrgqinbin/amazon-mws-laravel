@@ -1,6 +1,7 @@
 <?php namespace Creacoon\AmazonMws;
 
 use Creacoon\AmazonMws\AmazonCore;
+use Creacoon\AmazonMws\AmazonProduct;
 /**
  * Copyright 2013 CPI Group, LLC
  *
@@ -44,11 +45,6 @@ abstract class AmazonProductsCore extends AmazonCore{
     public function __construct($s, $mock = false, $m = null, $config = null){
         parent::__construct($s, $mock, $m, $config);
         include($this->env);
-        if (file_exists($this->config)){
-            include($this->config);
-        } else {
-            throw new \Exception('Config file does not exist!');
-        }
         
         if(isset($AMAZON_VERSION_PRODUCTS)){
             $this->urlbranch = 'Products/'.$AMAZON_VERSION_PRODUCTS;
@@ -56,8 +52,8 @@ abstract class AmazonProductsCore extends AmazonCore{
         }
         
         
-        if(isset($store[$s]) && array_key_exists('marketplaceId', $store[$s])){
-            $this->options['MarketplaceId'] = $store[$s]['marketplaceId'];
+        if(array_key_exists('marketplaceId', $this->storeConfig)){
+            $this->options['MarketplaceId'] = $this->storeConfig['marketplaceId'];
         } else {
             $this->log("Marketplace ID is missing",'Urgent');
         }
@@ -131,4 +127,3 @@ abstract class AmazonProductsCore extends AmazonCore{
         }
     }
 }
-?>

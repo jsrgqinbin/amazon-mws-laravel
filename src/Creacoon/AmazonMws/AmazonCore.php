@@ -117,6 +117,18 @@ abstract class AmazonCore
      * @var string
      */
     protected $configDrive = 'database';
+    /**
+     * 店铺的配置信息
+     *
+     * @var array
+     */
+    protected $storeConfig = [
+        'merchantId' => '',
+        'marketplaceId' => '',
+        'keyId' => '',
+        'secretKey' => '',
+        'countryCode' => 'US'
+    ];
 
     /**
      * AmazonCore constructor sets up key information used in all Amazon requests.
@@ -376,10 +388,12 @@ abstract class AmazonCore
         if ($r['code'] == 200) {
             return true;
         } else {
-            $xml = simplexml_load_string($r['body'])->Error;
-            $this->log("Bad Response! " . $r['code'] . " " . $r['error'] . ": " . $xml->Code . " - " . $xml->Message,
-                'Urgent');
-
+            if(empty($r['body'])){
+                $this->log("Bad Response! Body is empty!");
+            } else {
+                $xml = simplexml_load_string($r['body'])->Error;
+                $this->log("Bad Response! " . $r['code'] . " " . $r['error'] . ": " . $xml->Code . " - " . $xml->Message, 'Urgent');
+            }
             return false;
         }
     }
@@ -397,11 +411,11 @@ abstract class AmazonCore
     {
         switch ($this->configDrive) {
             case 'file':
-                $this->config = Config::get('amazon-mws.' . $s);
+                $this->storeConfig = Config::get('amazon-mws.store.' . $s);
                 break;
             case 'database':
-                $accountModel = App\Models\Account::where('account_id',$s)->limit(1)->first();
-                if(!$accountModel){
+                $accountModel = \App\Models\Account::where('account_id', $s)->limit(1)->first();
+                if (!$accountModel) {
                     throw new \Exception("{$s} Config Model does not exist or cannot be read!");
                 }
                 $accountTokenJson = $accountModel->token;
@@ -423,17 +437,17 @@ abstract class AmazonCore
                     'secretKey' => $AWS_SECRET_ACCESS_KEY,
                     'countryCode' => $COUNTRY_CODE
                 ];
-                $this->config = $configData;
+                $this->storeConfig = $configData;
                 break;
         }
 
         $AMAZON_SERVICE_URL = Config::get('amazon-mws.DEFAULT_AMAZON_SERVICE_URL');
 
         $accountInfo = Config::get('amazon-mws.accountInfo');
-        if(isset($accountInfo[$this->config['countryCode']])){
-            $AMAZON_SERVICE_URL = array_get($accountInfo[$this->config['countryCode']],'SERVICE_URL');
+        if (isset($accountInfo[$this->storeConfig['countryCode']])) {
+            $AMAZON_SERVICE_URL = array_get($accountInfo[$this->storeConfig['countryCode']], 'SERVICE_URL');
         }
-        
+
         if (isset($AMAZON_SERVICE_URL)) {
             $this->urlbase = $AMAZON_SERVICE_URL;
         } else {
@@ -454,27 +468,19 @@ abstract class AmazonCore
      */
     public function setStore($s)
     {
-        $store = Config::get('amazon-mws.store');
-
-        if (array_key_exists($s, $store)) {
-            $this->storeName = $s;
-            if (array_key_exists('merchantId', $store[$s])) {
-                $this->options['SellerId'] = $store[$s]['merchantId'];
-            } else {
-                $this->log("Merchant ID is missing!", 'Warning');
-            }
-            if (array_key_exists('keyId', $store[$s])) {
-                $this->options['AWSAccessKeyId'] = $store[$s]['keyId'];
-            } else {
-                $this->log("Access Key ID is missing!", 'Warning');
-            }
-            if (!array_key_exists('secretKey', $store[$s])) {
-                $this->log("Secret Key is missing!", 'Warning');
-            }
-
+        $this->storeName = $s;
+        if (array_key_exists('merchantId', $this->storeConfig)) {
+            $this->options['SellerId'] = $this->storeConfig['merchantId'];
         } else {
-            throw new \Exception("Store $s does not exist!");
-            $this->log("Store $s does not exist!", 'Warning');
+            $this->log("Merchant ID is missing!", 'Warning');
+        }
+        if (array_key_exists('keyId', $this->storeConfig)) {
+            $this->options['AWSAccessKeyId'] = $this->storeConfig['keyId'];
+        } else {
+            $this->log("Access Key ID is missing!", 'Warning');
+        }
+        if (!array_key_exists('secretKey', $this->storeConfig)) {
+            $this->log("Secret Key is missing!", 'Warning');
         }
     }
 
@@ -611,16 +617,8 @@ abstract class AmazonCore
      */
     protected function genQuery()
     {
-        // if (file_exists($this->config)){
-        //     include($this->config);
-        // } else {
-        //     throw new Exception("Config file does not exist!");
-        // }
-
-        $store = Config::get('amazon-mws.store');
-
-        if (array_key_exists($this->storeName, $store) && array_key_exists('secretKey', $store[$this->storeName])) {
-            $secretKey = $store[$this->storeName]['secretKey'];
+        if (array_key_exists('secretKey', $this->storeConfig)) {
+            $secretKey = $this->storeConfig['secretKey'];
         } else {
             throw new \Exception("Secret Key is missing!");
         }
@@ -646,6 +644,8 @@ abstract class AmazonCore
         $response = $this->fetchURL($url, $param);
 
         if (isset($response['error'])) {
+            $response['code'] = 400;
+            $response['body'] = '';
             $this->log("Making request to Amazon gave an error: " . $response['error']);
         }
 

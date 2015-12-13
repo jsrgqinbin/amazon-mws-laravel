@@ -195,7 +195,6 @@ class AmazonProductInfo extends AmazonProductsCore{
         }
         
         $this->parseXML($xml);
-        
     }
     
     /**

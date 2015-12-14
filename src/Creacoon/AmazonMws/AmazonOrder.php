@@ -159,6 +159,9 @@ class AmazonOrder extends AmazonOrderCore{
         $d['PurchaseDate'] = (string)$xml->PurchaseDate;
         $d['LastUpdateDate'] = (string)$xml->LastUpdateDate;
         $d['OrderStatus'] = (string)$xml->OrderStatus;
+        if (isset($xml->OrderType)) {
+            $d['OrderType'] = (string)$xml->OrderType;
+        }
         if (isset($xml->FulfillmentChannel)){
             $d['FulfillmentChannel'] = (string)$xml->FulfillmentChannel;
         }
@@ -170,6 +173,10 @@ class AmazonOrder extends AmazonOrderCore{
         }
         if (isset($xml->ShipServiceLevel)){
             $d['ShipServiceLevel'] = (string)$xml->ShipServiceLevel;
+        }
+        //ShipmentServiceLevelCategory
+        if (isset($xml->ShipmentServiceLevelCategory)){
+            $d['ShipmentServiceLevelCategory'] = (string)$xml->ShipmentServiceLevelCategory;
         }
         if (isset($xml->ShippingAddress)){
             $d['ShippingAddress'] = array();
@@ -231,6 +238,18 @@ class AmazonOrder extends AmazonOrderCore{
         }
         if (isset($xml->LatestDeliveryDate)){
             $d['LatestDeliveryDate'] = (string)$xml->LatestDeliveryDate;
+        }
+        //CbaDisplayableShippingLabel
+        if (isset($xml->CbaDisplayableShippingLabel)){
+            $d['CbaDisplayableShippingLabel'] = (string)$xml->CbaDisplayableShippingLabel;
+        }
+        //ShippedByAmazonTFM
+        if (isset($xml->ShippedByAmazonTFM)){
+            $d['ShippedByAmazonTFM'] = (string)$xml->ShippedByAmazonTFM;
+        }
+        //TFMShipmentStatus
+        if (isset($xml->TFMShipmentStatus)){
+            $d['TFMShipmentStatus'] = (string)$xml->TFMShipmentStatus;
         }
         
         $this->data = $d;
@@ -350,6 +369,25 @@ class AmazonOrder extends AmazonOrderCore{
             return false;
         }
     }
+
+    /**
+     * Returns the status of the Order.
+     *
+     * The type of the order.
+     * OrderType values:
+     * StandardOrder - An order that contains items for which you currently have inventory in stock.
+     * Preorder - An order that contains items with a release date that is in the future.
+     * Note: Preorder is a possible OrderType value in Japan (JP) only.
+     * Type: xs:string
+     * @return string|boolean single value, or <b>FALSE</b> if status not set yet
+     */
+    public function getOrderType(){
+        if (isset($this->data['OrderType'])){
+            return $this->data['OrderType'];
+        } else {
+            return false;
+        }
+    }
     
     /**
      * Returns the Fulfillment Channel.
@@ -406,7 +444,22 @@ class AmazonOrder extends AmazonOrderCore{
             return false;
         }
     }
-    
+
+    /**
+     * The shipment service level category of the order. Valid values are Expedited, NextDay, SecondDay, and Standard.
+     * Optional
+
+     * Type: xs:string
+     *
+     * @return bool
+     */
+    public function getShipmentServiceLevelCategory(){
+        if (isset($this->data['ShipmentServiceLevelCategory'])){
+            return $this->data['ShipmentServiceLevelCategory'];
+        } else {
+            return false;
+        }
+    }
     /**
      * Returns an array containing all of the address information.
      * 

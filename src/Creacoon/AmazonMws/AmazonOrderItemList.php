@@ -248,6 +248,22 @@ class AmazonOrderItemList extends AmazonOrderCore implements \Iterator{
                 $this->itemList[$n]['CODFeeDiscount']['Amount'] = (string)$item->CODFeeDiscount->Amount;
                 $this->itemList[$n]['CODFeeDiscount']['CurrencyCode'] = (string)$item->CODFeeDiscount->CurrencyCode;
             }
+            //ConditionId
+            if (isset($item->ConditionId)){
+                $this->itemList[$n]['ConditionId'] = (string)$item->ConditionId;
+            }
+            //ConditionSubtypeId
+            if (isset($item->ConditionSubtypeId)){
+                $this->itemList[$n]['ConditionSubtypeId'] = (string)$item->ConditionSubtypeId;
+            }
+            //ScheduledDeliveryStartDate
+            if (isset($item->ScheduledDeliveryStartDate)){
+                $this->itemList[$n]['ScheduledDeliveryStartDate'] = (string)$item->ScheduledDeliveryStartDate;
+            }
+            //ScheduledDeliveryStartDate
+            if (isset($item->ScheduledDeliveryStartDate)){
+                $this->itemList[$n]['ScheduledDeliveryStartDate'] = (string)$item->ScheduledDeliveryStartDate;
+            }
             if (isset($item->PromotionIds)){
                 $i = 0;
                 foreach($item->PromotionIds->children() as $x){

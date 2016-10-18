@@ -12,19 +12,26 @@ class AmazonMwsServiceProvider extends ServiceProvider {
 	 */
 	protected $defer = false;
 
-	/**
-	 * Register the service provider.
-	 *
-	 * @return void
-	 */
-	public function register()
-	{
-		//
-	}
+    /**
+     * Register the service provider.
+     *
+     * @return void
+     */
+    public function register()
+    {
+        $configPath = __DIR__ . '/../../config/amazon-mws.php';
+        $this->mergeConfigFrom($configPath, 'amazon-mws');
+
+        $this->app->alias('AmazonOrderList', 'Creacoon\AmazonMws\AmazonOrderList');
+        $this->app->alias('AmazonOrderItemList', 'Creacoon\AmazonMws\AmazonOrderItemList');
+    }
 
 	public function boot()
 	{
 		$this->package('creacoon/amazon-mws');
+        $configPath = __DIR__ . '/../../config/amazon-mws.php';
+        $this->publishes([$configPath => config_path('amazon-mws.php')], 'config');
+
 		AliasLoader::getInstance()->alias('AmazonFeed', 'Creacoon\AmazonMws\AmazonFeed');
 		AliasLoader::getInstance()->alias('AmazonFeedList', 'Creacoon\AmazonMws\AmazonFeedList');
 		AliasLoader::getInstance()->alias('AmazonFeedResult', 'Creacoon\AmazonMws\AmazonFeedResult');

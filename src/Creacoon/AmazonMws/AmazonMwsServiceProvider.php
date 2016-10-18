@@ -28,7 +28,7 @@ class AmazonMwsServiceProvider extends ServiceProvider {
 
 	public function boot()
 	{
-		$this->package('creacoon/amazon-mws');
+		//$this->package('creacoon/amazon-mws');
         $configPath = __DIR__ . '/../../config/amazon-mws.php';
         $this->publishes([$configPath => config_path('amazon-mws.php')], 'config');
 

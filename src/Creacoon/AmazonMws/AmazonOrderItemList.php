@@ -1,7 +1,6 @@
 <?php namespace Creacoon\AmazonMws;
 
 use Creacoon\AmazonMws\AmazonOrderCore;
-
 /**
  * Copyright 2013 CPI Group, LLC
  *
@@ -27,11 +26,12 @@ use Creacoon\AmazonMws\AmazonOrderCore;
  * required. This object can use tokens when retrieving the list.
  */
 class AmazonOrderItemList extends AmazonOrderCore implements \Iterator{
-    private $itemList;
+    protected $orderId;
+    protected $itemList;
     protected $tokenFlag = false;
     protected $tokenUseFlag = false;
-    private $i = 0;
-    private $index = 0;
+    protected $i = 0;
+    protected $index = 0;
 
     /**
      * AmazonItemLists contain all of the items for a given order.
@@ -41,14 +41,15 @@ class AmazonOrderItemList extends AmazonOrderCore implements \Iterator{
      * on these parameters and common methods.
      * Please note that an extra parameter comes before the usual Mock Mode parameters,
      * so be careful when setting up the object.
-     * @param string $s <p>Name for the store you want to use.</p>
+     * @param string $s [optional] <p>Name for the store you want to use.
+     * This parameter is optional if only one store is defined in the config file.</p>
      * @param string $id [optional] <p>The order ID to set for the object.</p>
      * @param boolean $mock [optional] <p>This is a flag for enabling Mock Mode.
      * This defaults to <b>FALSE</b>.</p>
      * @param array|string $m [optional] <p>The files (or file) to use in Mock Mode.</p>
      * @param string $config [optional] <p>An alternate config file to set. Used for testing.</p>
      */
-    public function __construct($s, $id=null, $mock = false, $m = null, $config = null){
+    public function __construct($s = null, $id=null, $mock = false, $m = null, $config = null){
         parent::__construct($s, $mock, $m, $config);
         include($this->env);
         
@@ -97,7 +98,7 @@ class AmazonOrderItemList extends AmazonOrderCore implements \Iterator{
      * 
      * This method sets the Amazon Order ID to be sent in the next request.
      * This parameter is required for fetching the order's items from Amazon.
-     * @param string $s <p>either string or number</p>
+     * @param string $id <p>Amazon Order ID</p>
      * @return boolean <b>FALSE</b> if improper input
      */
     public function setOrderId($id){
@@ -116,7 +117,7 @@ class AmazonOrderItemList extends AmazonOrderCore implements \Iterator{
      * the data back as a response, which can be retrieved using <i>getItems</i>.
      * Other methods are available for fetching specific values from the order.
      * This operation can potentially involve tokens.
-     * @param boolean <p>When set to <b>FALSE</b>, the function will not recurse, defaults to <b>TRUE</b></p>
+     * @param boolean $r [optional] <p>When set to <b>FALSE</b>, the function will not recurse, defaults to <b>TRUE</b></p>
      * @return boolean <b>FALSE</b> if something goes wrong
      */
     public function fetchItems($r = true){
@@ -142,8 +143,10 @@ class AmazonOrderItemList extends AmazonOrderCore implements \Iterator{
         if (is_null($xml->AmazonOrderId)){
             $this->log("You just got throttled.",'Warning');
             return false;
-        } else if (isset($this->options['AmazonOrderId']) && $this->options['AmazonOrderId'] && $this->options['AmazonOrderId'] != $xml->AmazonOrderId){
-            $this->log('You grabbed the wrong Order\'s items! - '.$this->options['AmazonOrderId'].' =/= '.$xml->AmazonOrderId,'Urgent');
+        }
+        $this->orderId = (string)$xml->AmazonOrderId;
+        if (!empty($this->options['AmazonOrderId']) && $this->options['AmazonOrderId'] != $this->orderId){
+            $this->log('You grabbed the wrong Order\'s items! - '.$this->options['AmazonOrderId'].' =/= '.$this->orderId,'Urgent');
         }
         
         $this->parseXML($xml->OrderItems);
@@ -183,7 +186,7 @@ class AmazonOrderItemList extends AmazonOrderCore implements \Iterator{
      * Parses XML response into array.
      * 
      * This is what reads the response XML and converts it into an array.
-     * @param SimpleXMLObject $xml <p>The XML response from Amazon.</p>
+     * @param SimpleXMLElement $xml <p>The XML response from Amazon.</p>
      * @return boolean <b>FALSE</b> if no XML data is found
      */
     protected function parseXML($xml){
@@ -201,6 +204,17 @@ class AmazonOrderItemList extends AmazonOrderCore implements \Iterator{
             $this->itemList[$n]['QuantityOrdered'] = (string)$item->QuantityOrdered;
             if (isset($item->QuantityShipped)){
                 $this->itemList[$n]['QuantityShipped'] = (string)$item->QuantityShipped;
+            }
+            if (isset($item->BuyerCustomizedInfo->CustomizedURL)){
+                $this->itemList[$n]['BuyerCustomizedInfo'] = (string)$item->BuyerCustomizedInfo->CustomizedURL;
+            }
+            if (isset($item->PointsGranted)){
+                $this->itemList[$n]['PointsGranted']['PointsNumber'] = (string)$item->PointsGranted->PointsNumber;
+                $this->itemList[$n]['PointsGranted']['Amount'] = (string)$item->PointsGranted->PointsMonetaryValue->Amount;
+                $this->itemList[$n]['PointsGranted']['CurrencyCode'] = (string)$item->PointsGranted->PointsMonetaryValue->CurrencyCode;
+            }
+            if (isset($item->PriceDesignation)){
+                $this->itemList[$n]['PriceDesignation'] = (string)$item->PriceDesignation;
             }
             if (isset($item->GiftMessageText)){
                 $this->itemList[$n]['GiftMessageText'] = (string)$item->GiftMessageText;
@@ -248,22 +262,6 @@ class AmazonOrderItemList extends AmazonOrderCore implements \Iterator{
                 $this->itemList[$n]['CODFeeDiscount']['Amount'] = (string)$item->CODFeeDiscount->Amount;
                 $this->itemList[$n]['CODFeeDiscount']['CurrencyCode'] = (string)$item->CODFeeDiscount->CurrencyCode;
             }
-            //ConditionId
-            if (isset($item->ConditionId)){
-                $this->itemList[$n]['ConditionId'] = (string)$item->ConditionId;
-            }
-            //ConditionSubtypeId
-            if (isset($item->ConditionSubtypeId)){
-                $this->itemList[$n]['ConditionSubtypeId'] = (string)$item->ConditionSubtypeId;
-            }
-            //ScheduledDeliveryStartDate
-            if (isset($item->ScheduledDeliveryStartDate)){
-                $this->itemList[$n]['ScheduledDeliveryStartDate'] = (string)$item->ScheduledDeliveryStartDate;
-            }
-            //ScheduledDeliveryStartDate
-            if (isset($item->ScheduledDeliveryStartDate)){
-                $this->itemList[$n]['ScheduledDeliveryStartDate'] = (string)$item->ScheduledDeliveryStartDate;
-            }
             if (isset($item->PromotionIds)){
                 $i = 0;
                 foreach($item->PromotionIds->children() as $x){
@@ -271,9 +269,52 @@ class AmazonOrderItemList extends AmazonOrderCore implements \Iterator{
                     $i++;
                 }
             }
+            if (isset($item->InvoiceData)){
+                if (isset($item->InvoiceData->InvoiceRequirement)){
+                    $this->itemList[$n]['InvoiceData']['InvoiceRequirement'] = (string)$item->InvoiceData->InvoiceRequirement;
+                }
+                if (isset($item->InvoiceData->BuyerSelectedInvoiceCategory)){
+                    $this->itemList[$n]['InvoiceData']['BuyerSelectedInvoiceCategory'] = (string)$item->InvoiceData->BuyerSelectedInvoiceCategory;
+                }
+                if (isset($item->InvoiceData->InvoiceTitle)){
+                    $this->itemList[$n]['InvoiceData']['InvoiceTitle'] = (string)$item->InvoiceData->InvoiceTitle;
+                }
+                if (isset($item->InvoiceData->InvoiceInformation)){
+                    $this->itemList[$n]['InvoiceData']['InvoiceInformation'] = (string)$item->InvoiceData->InvoiceInformation;
+                }
+            }
+            if (isset($item->ConditionId)){
+                $this->itemList[$n]['ConditionId'] = (string)$item->ConditionId;
+            }
+            if (isset($item->ConditionSubtypeId)){
+                $this->itemList[$n]['ConditionSubtypeId'] = (string)$item->ConditionSubtypeId;
+            }
+            if (isset($item->ConditionNote)){
+                $this->itemList[$n]['ConditionNote'] = (string)$item->ConditionNote;
+            }
+            if (isset($item->ScheduledDeliveryStartDate)){
+                $this->itemList[$n]['ScheduledDeliveryStartDate'] = (string)$item->ScheduledDeliveryStartDate;
+            }
+            if (isset($item->ScheduledDeliveryEndDate)){
+                $this->itemList[$n]['ScheduledDeliveryEndDate'] = (string)$item->ScheduledDeliveryEndDate;
+            }
             $this->index++;
         }
             
+    }
+
+    /**
+     * Returns the order ID for the items.
+     *
+     * This method will return <b>FALSE</b> if the list has not yet been filled.
+     * @return string|boolean single value, or <b>FALSE</b> if not set yet
+     */
+    public function getOrderId(){
+        if (isset($this->orderId)){
+            return $this->orderId;
+        } else {
+            return false;
+        }
     }
     
     /**
@@ -404,6 +445,57 @@ class AmazonOrderItemList extends AmazonOrderCore implements \Iterator{
     public function getQuantityShipped($i = 0){
         if (isset($this->itemList[$i]['QuantityShipped'])){
             return $this->itemList[$i]['QuantityShipped'];
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * Returns the URL for the ZIP file containing the customized options for the specified entry.
+     *
+     * This method will return <b>FALSE</b> if the list has not yet been filled.
+     * @param int $i [optional] <p>List index to retrieve the value from. Defaults to 0.</p>
+     * @return string|boolean single value, or <b>FALSE</b> if Non-numeric index
+     */
+    public function getCustomizedInfo($i = 0){
+        if (isset($this->itemList[$i]['BuyerCustomizedInfo'])){
+            return $this->itemList[$i]['BuyerCustomizedInfo'];
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * Returns the number of Amazon Points granted for the specified entry.
+     *
+     * This method will return <b>FALSE</b> if the list has not yet been filled.
+     * If an array is returned, it will have the fields <b>PointsNumber</b>, <b>Amount</b> and <b>CurrencyCode</b>.
+     * @param int $i [optional] <p>List index to retrieve the value from. Defaults to 0.</p>
+     * @param boolean $only [optional] <p>set to <b>TRUE</b> to get only the number of points</p>
+     * @return array|string|boolean array, single value, or <b>FALSE</b> if Non-numeric index
+     */
+    public function getPointsGranted($i = 0, $only = false){
+        if (isset($this->itemList[$i]['PointsGranted'])){
+            if ($only){
+                return $this->itemList[$i]['PointsGranted']['PointsNumber'];
+            } else {
+                return $this->itemList[$i]['PointsGranted'];
+            }
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * Returns the price designation for the specified entry.
+     *
+     * This method will return <b>FALSE</b> if the list has not yet been filled.
+     * @param int $i [optional] <p>List index to retrieve the value from. Defaults to 0.</p>
+     * @return string|boolean single value, or <b>FALSE</b> if Non-numeric index
+     */
+    public function getPriceDesignation($i = 0){
+        if (isset($this->itemList[$i]['PriceDesignation'])){
+            return $this->itemList[$i]['PriceDesignation'];
         } else {
             return false;
         }
@@ -626,7 +718,7 @@ class AmazonOrderItemList extends AmazonOrderCore implements \Iterator{
     }
     
     /**
-     * Returns specified promotion ID for specified item.
+     * Returns specified promotion ID for the specified item.
      * 
      * This method will return the entire list of Promotion IDs if <i>$j</i> is not set.
      * @param int $i [optional] <p>List index to retrieve the value from. Defaults to 0.</p>
@@ -643,7 +735,129 @@ class AmazonOrderItemList extends AmazonOrderCore implements \Iterator{
         } else {
             return false;
         }
-        
+    }
+    
+    /**
+     * Returns invoice data for the specified item.
+     * 
+     * This method will return <b>FALSE</b> if the list has not yet been filled.
+     * The array for invoice data may have the following fields:
+     * <ul>
+     * <li><b>InvoiceRequirement</b> - invoice requirement information</li>
+     * <li><b>BuyerSelectedInvoiceCategory</b> - invoice category information selected by the buyer</li>
+     * <li><b>InvoiceTitle</b> - the title of the invoice as specified by the buyer</li>
+     * <li><b>InvoiceInformation</b> - additional invoice information</li>
+     * </ul>
+     * @param int $i [optional] <p>List index to retrieve the value from. Defaults to 0.</p>
+     * @return array|boolean array, or <b>FALSE</b> if incorrect index
+     */
+    public function getInvoiceData($i = 0){
+        if (isset($this->itemList[$i]['InvoiceData'])){
+            return $this->itemList[$i]['InvoiceData'];
+        } else {
+            return false;
+        }
+    }
+    
+    /**
+     * Returns the condition for the specified item.
+     * 
+     * This method will return <b>FALSE</b> if the list has not yet been filled.
+     * Possible values for the condition ID are...
+     * <ul>
+     * <li>New</li>
+     * <li>Used</li>
+     * <li>Collectible</li>
+     * <li>Refurbished</li>
+     * <li>Preorder</li>
+     * <li>Club</li>
+     * </ul>
+     * @param int $i [optional] <p>List index to retrieve the value from. Defaults to 0.</p>
+     * @return string|boolean single value, or <b>FALSE</b> if incorrect index
+     */
+    public function getConditionId($i = 0){
+        if (isset($this->itemList[$i]['ConditionId'])){
+            return $this->itemList[$i]['ConditionId'];
+        } else {
+            return false;
+        }
+    }
+    
+    /**
+     * Returns the subcondition for the specified item.
+     * 
+     * This method will return <b>FALSE</b> if the list has not yet been filled.
+     * Possible values for the subcondition ID are...
+     * <ul>
+     * <li>New</li>
+     * <li>Mint</li>
+     * <li>Very Good</li>
+     * <li>Good</li>
+     * <li>Acceptable</li>
+     * <li>Poor</li>
+     * <li>Club</li>
+     * <li>OEM</li>
+     * <li>Warranty</li>
+     * <li>Refurbished Warranty</li>
+     * <li>Refurbished</li>
+     * <li>Open Box</li>
+     * <li>Any</li>
+     * <li>Other</li>
+     * </ul>
+     * @param int $i [optional] <p>List index to retrieve the value from. Defaults to 0.</p>
+     * @return string|boolean single value, or <b>FALSE</b> if incorrect index
+     */
+    public function getConditionSubtypeId($i = 0){
+        if (isset($this->itemList[$i]['ConditionSubtypeId'])){
+            return $this->itemList[$i]['ConditionSubtypeId'];
+        } else {
+            return false;
+        }
+    }
+    
+    /**
+     * Returns the condition description for the specified item.
+     * 
+     * This method will return <b>FALSE</b> if the list has not yet been filled.
+     * @param int $i [optional] <p>List index to retrieve the value from. Defaults to 0.</p>
+     * @return string|boolean single value, or <b>FALSE</b> if incorrect index
+     */
+    public function getConditionNote($i = 0){
+        if (isset($this->itemList[$i]['ConditionNote'])){
+            return $this->itemList[$i]['ConditionNote'];
+        } else {
+            return false;
+        }
+    }
+    
+    /**
+     * Returns the earliest date in the scheduled delivery window for the specified item.
+     * 
+     * This method will return <b>FALSE</b> if the list has not yet been filled.
+     * @param int $i [optional] <p>List index to retrieve the value from. Defaults to 0.</p>
+     * @return string|boolean single value, or <b>FALSE</b> if incorrect index
+     */
+    public function getScheduledDeliveryStartDate($i = 0){
+        if (isset($this->itemList[$i]['ScheduledDeliveryStartDate'])){
+            return $this->itemList[$i]['ScheduledDeliveryStartDate'];
+        } else {
+            return false;
+        }
+    }
+    
+    /**
+     * Returns the latest date in the scheduled delivery window for the specified item.
+     * 
+     * This method will return <b>FALSE</b> if the list has not yet been filled.
+     * @param int $i [optional] <p>List index to retrieve the value from. Defaults to 0.</p>
+     * @return string|boolean single value, or <b>FALSE</b> if incorrect index
+     */
+    public function getScheduledDeliveryEndDate($i = 0){
+        if (isset($this->itemList[$i]['ScheduledDeliveryEndDate'])){
+            return $this->itemList[$i]['ScheduledDeliveryEndDate'];
+        } else {
+            return false;
+        }
     }
     
     /**
@@ -684,5 +898,3 @@ class AmazonOrderItemList extends AmazonOrderCore implements \Iterator{
         return isset($this->itemList[$this->i]);
     }
 }
-
-?>

@@ -27,9 +27,9 @@ use Creacoon\AmazonMws\AmazonOrderCore;
  * class instead.
  */
 class AmazonOrderSet extends AmazonOrderCore implements \Iterator{
-    private $i = 0;
-    private $index = 0;
-    private $orderList;
+    protected $i = 0;
+    protected $index = 0;
+    protected $orderList;
     
     /**
      * AmazonOrderSet is a variation of <i>AmazonOrder</i> that pulls multiple specified orders.
@@ -39,14 +39,15 @@ class AmazonOrderSet extends AmazonOrderCore implements \Iterator{
      * on these parameters and common methods.
      * Please note that an extra parameter comes before the usual Mock Mode parameters,
      * so be careful when setting up the object.
-     * @param string $s <p>Name for the store you want to use.</p>
+     * @param string $s [optional] <p>Name for the store you want to use.
+     * This parameter is optional if only one store is defined in the config file.</p>
      * @param string $o [optional] <p>The Order IDs to set for the object.</p>
      * @param boolean $mock [optional] <p>This is a flag for enabling Mock Mode.
      * This defaults to <b>FALSE</b>.</p>
      * @param array|string $m [optional] <p>The files (or file) to use in Mock Mode.</p>
      * @param string $config [optional] <p>An alternate config file to set. Used for testing.</p>
      */
-    public function __construct($s, $o = null, $mock = false, $m = null, $config = null){
+    public function __construct($s = null, $o = null, $mock = false, $m = null, $config = null){
         parent::__construct($s, $mock, $m, $config);
         $this->i = 0;
         include($this->env);
@@ -71,7 +72,7 @@ class AmazonOrderSet extends AmazonOrderCore implements \Iterator{
      * This method sets the list of Order IDs to be sent in the next request.
      * If you wish to retrieve information for only one order, please use the 
      * <i>AmazonOrder</i> class instead.
-     * @param array|string $s <p>A list of Feed Submission IDs, or a single ID string.</p>
+     * @param array|string $o <p>A list of Amazon Order IDs, or a single ID string.</p>
      * @return boolean <b>FALSE</b> if improper input
      */
     public function setOrderIds($o){
@@ -99,7 +100,7 @@ class AmazonOrderSet extends AmazonOrderCore implements \Iterator{
      * Since order ID is a required parameter, these options should not be removed
      * without replacing them, so this method is not public.
      */
-    private function resetOrderIds(){
+    protected function resetOrderIds(){
         foreach($this->options as $op=>$junk){
                 if(preg_match("#AmazonOrderId.Id.#",$op)){
                     unset($this->options[$op]);
@@ -146,7 +147,7 @@ class AmazonOrderSet extends AmazonOrderCore implements \Iterator{
      * Parses XML response into array.
      * 
      * This is what reads the response XML and converts it into an array.
-     * @param SimpleXMLObject $xml <p>The XML response from Amazon.</p>
+     * @param SimpleXMLElement $xml <p>The XML response from Amazon.</p>
      * @return boolean <b>FALSE</b> if no XML data is found
      */
     protected function parseXML($xml){
@@ -239,7 +240,4 @@ class AmazonOrderSet extends AmazonOrderCore implements \Iterator{
     public function valid() {
         return isset($this->orderList[$this->i]);
     }
-    
 }
-
-?>

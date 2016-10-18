@@ -26,7 +26,7 @@ use Creacoon\AmazonMws\AmazonProductsCore;
  * and product ID(s) must be given.
  */
 class AmazonProductList extends AmazonProductsCore implements \Iterator{
-    private $i = 0;
+    protected $i = 0;
     
     /**
      * AmazonProductList fetches a list of products from Amazon.
@@ -34,13 +34,14 @@ class AmazonProductList extends AmazonProductsCore implements \Iterator{
      * The parameters are passed to the parent constructor, which are
      * in turn passed to the AmazonCore constructor. See it for more information
      * on these parameters and common methods.
-     * @param string $s <p>Name for the store you want to use.</p>
+     * @param string $s [optional] <p>Name for the store you want to use.
+     * This parameter is optional if only one store is defined in the config file.</p>
      * @param boolean $mock [optional] <p>This is a flag for enabling Mock Mode.
      * This defaults to <b>FALSE</b>.</p>
      * @param array|string $m [optional] <p>The files (or file) to use in Mock Mode.</p>
      * @param string $config [optional] <p>An alternate config file to set. Used for testing.</p>
      */
-    public function __construct($s, $mock = false, $m = null, $config = null){
+    public function __construct($s = null, $mock = false, $m = null, $config = null){
         parent::__construct($s, $mock, $m, $config);
         include($this->env);
         
@@ -55,7 +56,7 @@ class AmazonProductList extends AmazonProductsCore implements \Iterator{
     /**
      * Sets the ID type. (Required)
      * 
-     * @param string $s <p>"ASIN", "SellerSKU", "UPC", "EAN", "ISBN", or "JAN"</p>
+     * @param string $s <p>"ASIN", "GCID", "SellerSKU", "UPC", "EAN", "ISBN", or "JAN"</p>
      * @return boolean <b>FALSE</b> if improper input
      */
     public function setIdType($s){
@@ -95,7 +96,7 @@ class AmazonProductList extends AmazonProductsCore implements \Iterator{
      * Since product ID is a required parameter, these options should not be removed
      * without replacing them, so this method is not public.
      */
-    private function resetProductIds(){
+    protected function resetProductIds(){
         foreach($this->options as $op=>$junk){
             if(preg_match("#IdList#",$op)){
                 unset($this->options[$op]);
@@ -123,15 +124,16 @@ class AmazonProductList extends AmazonProductsCore implements \Iterator{
         $url = $this->urlbase.$this->urlbranch;
         
         $query = $this->genQuery();
-
+        
         if ($this->mockMode){
            $xml = $this->fetchMockFile();
         } else {
             $response = $this->sendRequest($url, array('Post'=>$query));
-
+            
             if (!$this->checkResponse($response)){
                 return false;
             }
+            
             $xml = simplexml_load_string($response['body']);
         }
         

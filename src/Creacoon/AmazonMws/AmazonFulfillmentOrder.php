@@ -1,6 +1,4 @@
-<?php 
-
-namespace Creacoon\AmazonMws;
+<?php namespace Creacoon\AmazonMws;
 
 use Creacoon\AmazonMws\AmazonOutboundCore;
 /**
@@ -29,7 +27,7 @@ use Creacoon\AmazonMws\AmazonOutboundCore;
  * using the <i>AmazonFulfillmentPreview</i> object.
  */
 class AmazonFulfillmentOrder extends AmazonOutboundCore{
-    private $order;
+    protected $order;
     
     /**
      * AmazonFulfillmentOrder fetches a fulfillment order from Amazon. You need a Fulfillment Order ID.
@@ -39,14 +37,15 @@ class AmazonFulfillmentOrder extends AmazonOutboundCore{
      * on these parameters and common methods.
      * Please note that an extra parameter comes before the usual Mock Mode parameters,
      * so be careful when setting up the object.
-     * @param string $s <p>Name for the store you want to use.</p>
+     * @param string $s [optional] <p>Name for the store you want to use.
+     * This parameter is optional if only one store is defined in the config file.</p>
      * @param string $id [optional] <p>The Fulfillment Order ID to set for the object.</p>
      * @param boolean $mock [optional] <p>This is a flag for enabling Mock Mode.
      * This defaults to <b>FALSE</b>.</p>
      * @param array|string $m [optional] <p>The files (or file) to use in Mock Mode.</p>
      * @param string $config [optional] <p>An alternate config file to set. Used for testing.</p>
      */
-    public function __construct($s, $id = null, $mock = false, $m = null, $config = null) {
+    public function __construct($s = null, $id = null, $mock = false, $m = null, $config = null) {
         parent::__construct($s, $mock, $m, $config);
         
         if($id){
@@ -110,7 +109,7 @@ class AmazonFulfillmentOrder extends AmazonOutboundCore{
      * Parses XML response into array.
      * 
      * This is what reads the response XML and converts it into an array.
-     * @param SimpleXMLObject $xml <p>The XML response from Amazon.</p>
+     * @param SimpleXMLElement $xml <p>The XML response from Amazon.</p>
      * @return boolean <b>FALSE</b> if no XML data is found
      */
     protected function parseXML($xml) {
@@ -129,10 +128,15 @@ class AmazonFulfillmentOrder extends AmazonOutboundCore{
         //Section 1: ShipmentOrder
         $d = $xml->FulfillmentOrder;
         $this->order['Details']['SellerFulfillmentOrderId'] = (string)$d->SellerFulfillmentOrderId;
+        $this->order['Details']['MarketplaceId'] = (string)$d->MarketplaceId;
         $this->order['Details']['DisplayableOrderId'] = (string)$d->DisplayableOrderId;
         $this->order['Details']['DisplayableOrderDateTime'] = (string)$d->DisplayableOrderDateTime;
         $this->order['Details']['DisplayableOrderComment'] = (string)$d->DisplayableOrderComment;
         $this->order['Details']['ShippingSpeedCategory'] = (string)$d->ShippingSpeedCategory;
+        if (isset($d->DeliveryWindow)) {
+            $this->order['Details']['DeliveryWindow']['StartDateTime'] = (string)$d->DeliveryWindow->StartDateTime;
+            $this->order['Details']['DeliveryWindow']['EndDateTime'] = (string)$d->DeliveryWindow->EndDateTime;
+        }
         //Address
             $this->order['Details']['DestinationAddress']['Name'] = (string)$d->DestinationAddress->Name;
             $this->order['Details']['DestinationAddress']['Line1'] = (string)$d->DestinationAddress->Line1;
@@ -155,10 +159,14 @@ class AmazonFulfillmentOrder extends AmazonOutboundCore{
                 $this->order['Details']['DestinationAddress']['PhoneNumber'] = (string)$d->DestinationAddress->PhoneNumber;
             }
         //End of Address
+        if (isset($d->FulfillmentAction)){
+            $this->order['Details']['FulfillmentAction'] = (string)$d->FulfillmentAction;
+        }
         if (isset($d->FulfillmentPolicy)){
             $this->order['Details']['FulfillmentPolicy'] = (string)$d->FulfillmentPolicy;
         }
         if (isset($d->FulfillmentMethod)){
+            //deprecated
             $this->order['Details']['FulfillmentMethod'] = (string)$d->FulfillmentMethod;
         }
         $this->order['Details']['ReceivedDateTime'] = (string)$d->ReceivedDateTime;
@@ -169,6 +177,25 @@ class AmazonFulfillmentOrder extends AmazonOutboundCore{
             foreach($d->NotificationEmailList->children() as $x){
                 $this->order['Details']['NotificationEmailList'][$i++] = (string)$x;
             }
+        }
+        if (isset($d->CODSettings->IsCODRequired)){
+            $this->order['Details']['CODSettings']['IsCODRequired'] = (string)$d->CODSettings->IsCODRequired;
+        }
+        if (isset($d->CODSettings->CODCharge)){
+            $this->order['Details']['CODSettings']['CODCharge']['CurrencyCode'] = (string)$d->CODSettings->CODCharge->CurrencyCode;
+            $this->order['Details']['CODSettings']['CODCharge']['Value'] = (string)$d->CODSettings->CODCharge->Value;
+        }
+        if (isset($d->CODSettings->CODChargeTax)){
+            $this->order['Details']['CODSettings']['CODChargeTax']['CurrencyCode'] = (string)$d->CODSettings->CODChargeTax->CurrencyCode;
+            $this->order['Details']['CODSettings']['CODChargeTax']['Value'] = (string)$d->CODSettings->CODChargeTax->Value;
+        }
+        if (isset($d->CODSettings->ShippingCharge)){
+            $this->order['Details']['CODSettings']['ShippingCharge']['CurrencyCode'] = (string)$d->CODSettings->ShippingCharge->CurrencyCode;
+            $this->order['Details']['CODSettings']['ShippingCharge']['Value'] = (string)$d->CODSettings->ShippingCharge->Value;
+        }
+        if (isset($d->CODSettings->ShippingChargeTax)){
+            $this->order['Details']['CODSettings']['ShippingChargeTax']['CurrencyCode'] = (string)$d->CODSettings->ShippingChargeTax->CurrencyCode;
+            $this->order['Details']['CODSettings']['ShippingChargeTax']['Value'] = (string)$d->CODSettings->ShippingChargeTax->Value;
         }
         
         //Section 2: Order Items
@@ -200,6 +227,14 @@ class AmazonFulfillmentOrder extends AmazonOutboundCore{
             if (isset($x->PerUnitDeclaredValue)){
                 $this->order['Items'][$i]['PerUnitDeclaredValue']['CurrencyCode'] = (string)$x->PerUnitDeclaredValue->CurrencyCode;
                 $this->order['Items'][$i]['PerUnitDeclaredValue']['Value'] = (string)$x->PerUnitDeclaredValue->Value;
+            }
+            if (isset($x->PerUnitPrice)){
+                $this->order['Items'][$i]['PerUnitPrice']['CurrencyCode'] = (string)$x->PerUnitPrice->CurrencyCode;
+                $this->order['Items'][$i]['PerUnitPrice']['Value'] = (string)$x->PerUnitPrice->Value;
+            }
+            if (isset($x->PerUnitTax)){
+                $this->order['Items'][$i]['PerUnitTax']['CurrencyCode'] = (string)$x->PerUnitTax->CurrencyCode;
+                $this->order['Items'][$i]['PerUnitTax']['Value'] = (string)$x->PerUnitTax->Value;
             }
             $i++;
         }
@@ -301,4 +336,3 @@ class AmazonFulfillmentOrder extends AmazonOutboundCore{
         }
     }
 }
-?>

@@ -1,6 +1,4 @@
-<?php 
-
-namespace Creacoon\AmazonMws;
+<?php namespace Creacoon\AmazonMws;
 
 use Creacoon\AmazonMws\AmazonFeedsCore;
 /**
@@ -29,9 +27,9 @@ use Creacoon\AmazonMws\AmazonFeedsCore;
  * the response from Amazon can be viewed with <i>getResponse</i>.
  */
 class AmazonFeed extends AmazonFeedsCore{
-    private $response;
-    private $feedContent;
-    private $feedMD5;
+    protected $response;
+    protected $feedContent;
+    protected $feedMD5;
     
     /**
      * AmazonFeed submits a Feed to Amazon.
@@ -39,13 +37,14 @@ class AmazonFeed extends AmazonFeedsCore{
      * The parameters are passed to the parent constructor, which are
      * in turn passed to the AmazonCore constructor. See it for more information
      * on these parameters and common methods.
-     * @param string $s <p>Name for the store you want to use.</p>
+     * @param string $s [optional] <p>Name for the store you want to use.
+     * This parameter is optional if only one store is defined in the config file.</p>
      * @param boolean $mock [optional] <p>This is a flag for enabling Mock Mode.
      * This defaults to <b>FALSE</b>.</p>
      * @param array|string $m [optional] <p>The files (or file) to use in Mock Mode.</p>
      * @param string $config [optional] <p>An alternate config file to set. Used for testing.</p>
      */
-    public function __construct($s, $mock = false, $m = null, $config = null){
+    public function __construct($s = null, $mock = false, $m = null, $config = null){
         parent::__construct($s, $mock, $m, $config);
         include($this->env);
         
@@ -83,7 +82,7 @@ class AmazonFeed extends AmazonFeedsCore{
      * 
      * This method loads the contents of a file to send as the feed. This
      * parameter is required in order to submit a feed to Amazon.
-     * @param string $url <p>The path to a file you want to use.
+     * @param string $path <p>The path to a file you want to use.
      * It can be relative or absolute.</p>
      */
     public function loadFeedFile($path){
@@ -116,40 +115,43 @@ class AmazonFeed extends AmazonFeedsCore{
         }
         /*
          * List of valid Feed Types:
-         * XML Feeds:
+         * Product & Inventory Feeds (XML):
          *      Product Feed ~ _POST_PRODUCT_DATA_
-         *      Relationships Feed ~ _POST_PRODUCT_RELATIONSHIP_DATA_
-         *      Single Format Item Feed ~ _POST_ITEM_DATA_
-         *      Shipping Override Feed ~ _POST_PRODUCT_OVERRIDES_DATA_
-         *      Product Images Feed ~ _POST_PRODUCT_IMAGE_DATA_
-         *      Pricing Feed ~ _POST_PRODUCT_PRICING_DATA_
          *      Inventory Feed ~ _POST_INVENTORY_AVAILABILITY_DATA_
-         *      Order Acknowledgement Feed ~ _POST_ORDER_ACKNOWLEDGEMENT_DATA_
-         *      Order Fulfillment Feed ~ _POST_ORDER_FULFILLMENT_DATA_
-         *      FBA Shipment Injection Fulfillment Feed~  _POST_FULFILLMENT_ORDER_REQUEST_DATA_
-         *      FBA Shipment Injection ~ _POST_FULFILLMENT_ORDER_CANCELLATION_
-         *      Cancellation Feed ~ _REQUEST_DATA_
-         *      Order Adjustment Feed ~ _POST_PAYMENT_ADJUSTMENT_DATA_
-         *      Invoice Confirmation Feed ~ _POST_INVOICE_CONFIRMATION_DATA_
-         * Tab Delimited Feeds:
-         *      Flat File Listings Feed ~ _POST_FLAT_FILE_LISTINGS_DATA_
-         *      Flat File Order Acknowledgement Feed ~ _POST_FLAT_FILE_ORDER_ACKNOWLEDGEMENT_DATA_
-         *      Flat File Order Fulfillment Feed ~ _POST_FLAT_FILE_FULFILLMENT_DATA_
-         *      Flat File FBA Shipment Injection Fulfillment Feed ~ _POST_FLAT_FILE_FULFILLMENT_ORDER_REQUEST_DATA_
-         *      Flat File FBA Shipment Injection Cancellation Feed ~ _POST_FLAT_FILE_FULFILLMENT_ORDER_CANCELLATION_REQUEST_DATA_
-         *      FBA Flat File Create Inbound Shipment Feed ~ _POST_FLAT_FILE_FBA_CREATE_INBOUND_SHIPMENT_
-         *      FBA Flat File Update Inbound Shipment Feed ~ _POST_FLAT_FILE_FBA_UPDATE_INBOUND_SHIPMENT_
-         *      FBA Flat File Shipment Notification Feed ~ _POST_FLAT_FILE_FBA_SHIPMENT_NOTIFICATION_FEED_
-         *      Flat File Order Adjustment Feed ~ _POST_FLAT_FILE_PAYMENT_ADJUSTMENT_DATA_
-         *      Flat File Invoice Confirmation Feed ~ _POST_FLAT_FILE_INVOICE_CONFIRMATION_DATA_
+         *      Overrides Feed ~ _POST_PRODUCT_OVERRIDES_DATA_
+         *      Pricing Feed ~ _POST_PRODUCT_PRICING_DATA_
+         *      Product Images Feed ~ _POST_PRODUCT_IMAGE_DATA_
+         *      Relationships Feed ~ _POST_PRODUCT_RELATIONSHIP_DATA_
+         *      ACES 3.0 Data (Automotive Part Finder) Feed ~ _POST_STD_ACES_DATA_
+         * Product & Inventory Feeds (Tab Delimited):
          *      Flat File Inventory Loader Feed ~ _POST_FLAT_FILE_INVLOADER_DATA_
-         *      Flat File Music Loader File ~ _POST_FLAT_FILE_CONVERGENCE_LISTINGS_DATA_
+         *      Flat File Listings Feed ~ _POST_FLAT_FILE_LISTINGS_DATA_
          *      Flat File Book Loader File ~ _POST_FLAT_FILE_BOOKLOADER_DATA_
+         *      Flat File Music Loader File ~ _POST_FLAT_FILE_CONVERGENCE_LISTINGS_DATA_
          *      Flat File Video Loader File ~ _POST_FLAT_FILE_LISTINGS_DATA_
          *      Flat File Price and Quantity Update File ~ _POST_FLAT_FILE_PRICEANDQUANTITYONLY_UPDATE_DATA_
-         *      Product Ads Flat File Feed ~ _POST_FLAT_FILE_SHOPZILLA_DATA_
-         * Universal Information Exchange Environment (UIEE) Feeds:
+         * Product & Inventory Feeds (Other):
          *      UIEE Inventory File ~ _POST_UIEE_BOOKLOADER_DATA_
+         * Order Feeds (XML):
+         *      Order Acknowledgement Feed ~ _POST_ORDER_ACKNOWLEDGEMENT_DATA_
+         *      Order Adjustment Feed ~ _POST_PAYMENT_ADJUSTMENT_DATA_
+         *      Order Fulfillment Feed ~ _POST_ORDER_FULFILLMENT_DATA_
+         *      Invoice Confirmation Feed ~ _POST_INVOICE_CONFIRMATION_DATA_
+         * Order Feeds (Tab Delimited):
+         *      Flat File Order Acknowledgement Feed ~ _POST_FLAT_FILE_ORDER_ACKNOWLEDGEMENT_DATA_
+         *      Flat File Order Adjustment Feed ~ _POST_FLAT_FILE_PAYMENT_ADJUSTMENT_DATA_
+         *      Flat File Order Fulfillment Feed ~ _POST_FLAT_FILE_FULFILLMENT_DATA_
+         *      Flat File Invoice Confirmation Feed ~ _POST_FLAT_FILE_INVOICE_CONFIRMATION_DATA_
+         * Fulfillment By Amazon Feeds (XML):
+         *      FBA Fulfillment Order Feed ~ _POST_FULFILLMENT_ORDER_REQUEST_DATA_
+         *      FBA Fulfillment Order Cancellation Request ~ _POST_FULFILLMENT_ORDER_CANCELLATION_REQUEST_DATA_
+         *      FBA Inbound Shipment Carton Information Feed ~ _POST_FBA_INBOUND_CARTON_CONTENTS_
+         * Fulfillment By Amazon Feeds (Tab Delimited):
+         *      Flat File FBA Fulfillment Order Feed ~ _POST_FLAT_FILE_FULFILLMENT_ORDER_REQUEST_DATA_
+         *      Flat File FBA Fulfillment Order Cancellation Feed ~ _POST_FLAT_FILE_FULFILLMENT_ORDER_CANCELLATION_REQUEST_DATA_
+         *      Flat File FBA Create Inbound Shipment Plan Feed ~ _POST_FLAT_FILE_FBA_CREATE_INBOUND_PLAN_
+         *      Flat File FBA Update Inbound Shipment Plan Feed ~ _POST_FLAT_FILE_FBA_UPDATE_INBOUND_PLAN_
+         *      Flat File FBA Create Removal Feed ~ _POST_FLAT_FILE_FBA_CREATE_REMOVAL_
          */
     }
     
@@ -277,7 +279,7 @@ class AmazonFeed extends AmazonFeedsCore{
      * Parses XML response into array.
      * 
      * This is what reads the response XML and converts it into an array.
-     * @param SimpleXMLObject $xml <p>The XML response from Amazon.</p>
+     * @param SimpleXMLElement $xml <p>The XML response from Amazon.</p>
      * @return boolean <b>FALSE</b> if no XML data is found
      */
     protected function parseXML($xml){
@@ -306,32 +308,6 @@ class AmazonFeed extends AmazonFeedsCore{
     }
     
     /**
-     * Checks whether or not the response is OK.
-     * 
-     * Verifies whether or not the HTTP response has the 200 OK code. If the code
-     * is not 200, the incident and error message returned are logged. This method
-     * is different than the ones used by other objects due to Amazon sending
-     * 100 Continue responses in addition to the usual response.
-     * @param array $r <p>The HTTP response array. Expects the array to have
-     * the fields <i>code</i>, <i>body</i>, and <i>error</i>.</p>
-     * @return boolean <b>TRUE</b> if the status is 200 OK, <b>FALSE</b> otherwise.
-     */
-    protected function checkResponse($r){
-        if (!is_array($r)){
-            $this->log("No Response found",'Warning');
-            return false;
-        }
-        //for dealing with 100 response
-        if (array_key_exists('error', $r) && $r['ok'] == 0){
-            $this->log("Response Not OK! Error: ".$r['error'],'Urgent');
-            return false;
-        } else {
-            $this->log("Response OK!");
-            return true;
-        }
-    }
-    
-    /**
      * Returns the response data in array.
      * 
      * It will contain the following fields:
@@ -341,7 +317,7 @@ class AmazonFeed extends AmazonFeedsCore{
      * <li><b>SubmittedDate</b> - The timestamp for when the Feed was received</li>
      * <li><b>FeedProcessingStatus</b> - The status of the feed, likely "_SUBMITTED_"</li>
      * </ul>
-     * @return array
+     * @return array|boolean associative array, or <b>FALSE</b> if no response is found
      */
     public function getResponse(){
         if (isset($this->response)){
@@ -350,8 +326,4 @@ class AmazonFeed extends AmazonFeedsCore{
             return false;
         }
     }
-    
-    
-    
 }
-?>

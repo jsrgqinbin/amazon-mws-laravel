@@ -26,7 +26,7 @@ use Creacoon\AmazonMws\AmazonOutboundCore;
  * Shipment IDs, which are needed for dealing with fulfillment orders.
  */
 class AmazonFulfillmentPreview extends AmazonOutboundCore{
-    private $previewList;
+    protected $previewList;
     
     /**
      * AmazonFulfillmentPreview sends a request to Amazon to generate a Fulfillment Shipment Preview.
@@ -34,13 +34,14 @@ class AmazonFulfillmentPreview extends AmazonOutboundCore{
      * The parameters are passed to the parent constructor, which are
      * in turn passed to the AmazonCore constructor. See it for more information
      * on these parameters and common methods.
-     * @param string $s <p>Name for the store you want to use.</p>
+     * @param string $s [optional] <p>Name for the store you want to use.
+     * This parameter is optional if only one store is defined in the config file.</p>
      * @param boolean $mock [optional] <p>This is a flag for enabling Mock Mode.
      * This defaults to <b>FALSE</b>.</p>
      * @param array|string $m [optional] <p>The files (or file) to use in Mock Mode.</p>
      * @param string $config [optional] <p>An alternate config file to set. Used for testing.</p>
      */
-    public function __construct($s, $mock = false, $m = null, $config = null) {
+    public function __construct($s = null, $mock = false, $m = null, $config = null) {
         parent::__construct($s, $mock, $m, $config);
         
         $this->options['Action'] = 'GetFulfillmentPreview';
@@ -59,7 +60,7 @@ class AmazonFulfillmentPreview extends AmazonOutboundCore{
      * <li><b>Line3</b> (optional) - max: 60 char</li>
      * <li><b>DistrictOrCounty</b> (optional) - max: 150 char</li>
      * <li><b>City</b> - max: 50 char</li>
-     * <li><b>StateOrProvidenceCode</b> - max: 150 char</li>
+     * <li><b>StateOrProvinceCode</b> - max: 150 char</li>
      * <li><b>CountryCode</b> - 2 digits</li>
      * <li><b>PostalCode</b> - max: 20 char</li>
      * <li><b>PhoneNumber</b> - max: 20 char</li>
@@ -91,7 +92,7 @@ class AmazonFulfillmentPreview extends AmazonOutboundCore{
             $this->options['Address.DistrictOrCounty'] = null;
         }
         $this->options['Address.City'] = $a['City'];
-        $this->options['Address.StateOrProvidenceCode'] = $a['StateOrProvidenceCode'];
+        $this->options['Address.StateOrProvinceCode'] = $a['StateOrProvinceCode'];
         $this->options['Address.CountryCode'] = $a['CountryCode'];
         $this->options['Address.PostalCode'] = $a['PostalCode'];
         if (array_key_exists('PhoneNumber', $a)){
@@ -114,7 +115,7 @@ class AmazonFulfillmentPreview extends AmazonOutboundCore{
         unset($this->options['Address.Line3']);
         unset($this->options['Address.DistrictOrCounty']);
         unset($this->options['Address.City']);
-        unset($this->options['Address.StateOrProvidenceCode']);
+        unset($this->options['Address.StateOrProvinceCode']);
         unset($this->options['Address.CountryCode']);
         unset($this->options['Address.PostalCode']);
         unset($this->options['Address.PhoneNumber']);
@@ -205,6 +206,38 @@ class AmazonFulfillmentPreview extends AmazonOutboundCore{
             }
         }
     }
+
+    /**
+     * Sets the option for getting previews that are for COD (Cash On Delivery). (Optional)
+     *
+     * If this option is set, Amazon will give previews for COD in addition to the normal previews.
+     * If this option is not set or is set to FALSE, Amazon will not give previews that are for COD.
+     * @param boolean $s [optional] <p>Defaults to TRUE</p>
+     */
+    public function setIncludeCod($s = 'true') {
+        if (filter_var($s, FILTER_VALIDATE_BOOLEAN)) {
+            $s = 'true';
+        } else {
+            $s = 'false';
+        }
+        $this->options['IncludeCODFulfillmentPreview'] = $s;
+    }
+
+    /**
+     * Sets the option for getting delivery window data in the fetched previews. (Optional)
+     *
+     * If this option is set, Amazon will give delivery window data for applicable order previews.
+     * If this option is not set or is set to FALSE, Amazon will not give delivery window data.
+     * @param boolean $s [optional] <p>Defaults to TRUE</p>
+     */
+    public function setIncludeDeliveryWindows($s = 'true') {
+        if (filter_var($s, FILTER_VALIDATE_BOOLEAN)) {
+            $s = 'true';
+        } else {
+            $s = 'false';
+        }
+        $this->options['IncludeDeliveryWindows'] = $s;
+    }
     
     /**
      * Generates a Fulfillment Preview with Amazon.
@@ -251,7 +284,7 @@ class AmazonFulfillmentPreview extends AmazonOutboundCore{
      * Parses XML response into array.
      * 
      * This is what reads the response XML and converts it into an array.
-     * @param SimpleXMLObject $xml <p>The XML response from Amazon.</p>
+     * @param SimpleXMLElement $xml <p>The XML response from Amazon.</p>
      * @return boolean <b>FALSE</b> if no XML data is found
      */
     protected function parseXML($xml) {
@@ -260,11 +293,14 @@ class AmazonFulfillmentPreview extends AmazonOutboundCore{
         }
         $i = 0;
         foreach($xml->children() as $x){
+            $this->previewList[$i]['ShippingSpeedCategory'] = (string)$x->ShippingSpeedCategory;
+            $this->previewList[$i]['IsFulfillable'] = (string)$x->IsFulfillable;
+            $this->previewList[$i]['IsCODCapable'] = (string)$x->IsCODCapable;
+            $this->previewList[$i]['MarketplaceId'] = (string)$x->MarketplaceId;
             if (isset($x->EstimatedShippingWeight)){
                 $this->previewList[$i]['EstimatedShippingWeight']['Unit'] = (string)$x->EstimatedShippingWeight->Unit;
                 $this->previewList[$i]['EstimatedShippingWeight']['Value'] = (string)$x->EstimatedShippingWeight->Value;
             }
-            $this->previewList[$i]['ShippingSpeedCategory'] = (string)$x->ShippingSpeedCategory;
             if (isset($x->FulfillmentPreviewShipments)){
                 $j = 0;
                 foreach ($x->FulfillmentPreviewShipments->children() as $y){
@@ -311,7 +347,15 @@ class AmazonFulfillmentPreview extends AmazonOutboundCore{
                     $j++;
                 }
             }
-            $this->previewList[$i]['IsFulfillable'] = (string)$x->IsFulfillable;
+            if (isset($x->ScheduledDeliveryInfo)){
+                $this->previewList[$i]['ScheduledDeliveryInfo']['DeliveryTimeZone'] = (string)$x->ScheduledDeliveryInfo->DeliveryTimeZone;
+                foreach ($x->ScheduledDeliveryInfo->DeliveryWindows->children() as $y){
+                    $temp = array();
+                    $temp['StartDateTime'] = (string)$y->DeliveryWindow->StartDateTime;
+                    $temp['EndDateTime'] = (string)$y->DeliveryWindow->EndDateTime;
+                    $this->previewList[$i]['ScheduledDeliveryInfo']['DeliveryWindows'][] = $temp;
+                }
+            }
             
             $i++;
         }
@@ -325,6 +369,8 @@ class AmazonFulfillmentPreview extends AmazonOutboundCore{
      * <ul>
      * <li><b>ShippingSpeedCategory</b> - "Standard", "Expedited", or "Priority"</li>
      * <li><b>IsFulfillable</b> - "true" or "false"</li>
+     * <li><b>IsCODCapable</b> - "true" or "false"</li>
+     * <li><b>MarketplaceId</b> - marketplace ID</li>
      * <li><b>EstimatedShippingWeight</b> (optional) - an array with the fields <b>Unit</b> and <b>Value</b></li>
      * <li><b>FulfillmentPreviewShipments</b> (optional)- array of shipments:</li>
      * <ul>
@@ -355,6 +401,15 @@ class AmazonFulfillmentPreview extends AmazonOutboundCore{
      * <li><b>ItemUnfulfillableReasons</b> - message as to why the item is unfulfillable</li>
      * </ul>
      * <li><b>OrderUnfulfillableReasons</b> (optional)- array of message strings</li>
+     * <li><b>ScheduledDeliveryInfo</b> (optional)- time zone and array of delivery windows</li>
+     * <ul>
+     * <li><b>DeliveryTimeZone</b> - IANA time zone name</li>
+     * <li><b>DeliveryWindows</b> - array of delivery windows</li>
+     * <ul>
+     * <li><b>StartDateTime</b> - ISO 8601 date format</li>
+     * <li><b>EndDateTime</b> - ISO 8601 date format</li>
+     * </ul>
+     * </ul>
      * </ul>
      * @param int $i [optional] <p>List index to retrieve the value from.
      * If none is given, the entire list will be returned. Defaults to NULL.</p>
@@ -397,4 +452,3 @@ class AmazonFulfillmentPreview extends AmazonOutboundCore{
         }
     }
 }
-?>

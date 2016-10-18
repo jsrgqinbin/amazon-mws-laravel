@@ -30,10 +30,10 @@ use Creacoon\AmazonMws\AmazonReportsCore;
 class AmazonReportScheduleList extends AmazonReportsCore implements \Iterator{
     protected $tokenFlag = false;
     protected $tokenUseFlag = false;
-    private $index = 0;
-    private $i = 0;
-    private $scheduleList;
-    private $count;
+    protected $index = 0;
+    protected $i = 0;
+    protected $scheduleList;
+    protected $count;
     
     /**
      * AmazonReportScheduleList sets a list of report schedules from Amazon.
@@ -41,13 +41,14 @@ class AmazonReportScheduleList extends AmazonReportsCore implements \Iterator{
      * The parameters are passed to the parent constructor, which are
      * in turn passed to the AmazonCore constructor. See it for more information
      * on these parameters and common methods.
-     * @param string $s <p>Name for the store you want to use.</p>
+     * @param string $s [optional] <p>Name for the store you want to use.
+     * This parameter is optional if only one store is defined in the config file.</p>
      * @param boolean $mock [optional] <p>This is a flag for enabling Mock Mode.
      * This defaults to <b>FALSE</b>.</p>
      * @param array|string $m [optional] <p>The files (or file) to use in Mock Mode.</p>
      * @param string $config [optional] <p>An alternate config file to set. Used for testing.</p>
      */
-    public function __construct($s, $mock = false, $m = null, $config = null) {
+    public function __construct($s = null, $mock = false, $m = null, $config = null) {
         parent::__construct($s, $mock, $m, $config);
         include($this->env);
         
@@ -129,7 +130,7 @@ class AmazonReportScheduleList extends AmazonReportsCore implements \Iterator{
      * the list back as a response, which can be retrieved using <i>getList</i>.
      * Other methods are available for fetching specific values from the list.
      * This operation can potentially involve tokens.
-     * @param boolean <p>When set to <b>FALSE</b>, the function will not recurse, defaults to <b>TRUE</b></p>
+     * @param boolean $r [optional] <p>When set to <b>FALSE</b>, the function will not recurse, defaults to <b>TRUE</b></p>
      * @return boolean <b>FALSE</b> if something goes wrong
      */
     public function fetchReportList($r = true){
@@ -206,7 +207,7 @@ class AmazonReportScheduleList extends AmazonReportsCore implements \Iterator{
      * Parses XML response into array.
      * 
      * This is what reads the response XML and converts it into an array.
-     * @param SimpleXMLObject $xml <p>The XML response from Amazon.</p>
+     * @param SimpleXMLElement $xml <p>The XML response from Amazon.</p>
      * @return boolean <b>FALSE</b> if no XML data is found
      */
     protected function parseXML($xml){
@@ -408,6 +409,4 @@ class AmazonReportScheduleList extends AmazonReportsCore implements \Iterator{
     public function valid() {
         return isset($this->scheduleList[$this->i]);
     }
-    
 }
-?>

@@ -31,10 +31,10 @@ use Creacoon\AmazonMws\AmazonFeedsCore;
 class AmazonFeedList extends AmazonFeedsCore implements \Iterator{
     protected $tokenFlag = false;
     protected $tokenUseFlag = false;
-    private $feedList;
-    private $index = 0;
-    private $i = 0;
-    private $count;
+    protected $feedList;
+    protected $index = 0;
+    protected $i = 0;
+    protected $count;
     
     /**
      * AmazonFeedList fetches a list of Feeds from Amazon.
@@ -42,13 +42,14 @@ class AmazonFeedList extends AmazonFeedsCore implements \Iterator{
      * The parameters are passed to the parent constructor, which are
      * in turn passed to the AmazonCore constructor. See it for more information
      * on these parameters and common methods.
-     * @param string $s <p>Name for the store you want to use.</p>
+     * @param string $s [optional] <p>Name for the store you want to use.
+     * This parameter is optional if only one store is defined in the config file.</p>
      * @param boolean $mock [optional] <p>This is a flag for enabling Mock Mode.
      * This defaults to <b>FALSE</b>.</p>
      * @param array|string $m [optional] <p>The files (or file) to use in Mock Mode.</p>
      * @param string $config [optional] <p>An alternate config file to set. Used for testing.</p>
      */
-    public function __construct($s, $mock = false, $m = null, $config = null){
+    public function __construct($s = null, $mock = false, $m = null, $config = null){
         parent::__construct($s, $mock, $m, $config);
         include($this->env);
         
@@ -173,7 +174,8 @@ class AmazonFeedList extends AmazonFeedsCore implements \Iterator{
      * the statuses in the list. If this parameter is not set, Amazon will return
      * Feed Submissions with any status.
      * @param array|string $s <p>A list of Feed Statuses, or a single status string.<br />
-     * Valid values are "_SUBMITTED_", "_IN_PROGRESS_", "_CANCELLED_", and "_DONE_".</p>
+     * Valid values are "_UNCONFIRMED_", "_SUBMITTED_", "_IN_PROGRESS_", "_IN_SAFETY_NET_",
+     * "_AWAITING_ASYNCHRONOUS_REPLY_", "_CANCELLED_", and "_DONE_".</p>
      * @return boolean <b>FALSE</b> if improper input
      */
     public function setFeedStatuses($s){
@@ -262,7 +264,7 @@ class AmazonFeedList extends AmazonFeedsCore implements \Iterator{
      * the list back as a response, which can be retrieved using <i>getFeedList</i>.
      * Other methods are available for fetching specific values from the list.
      * This operation can potentially involve tokens.
-     * @param boolean <p>When set to <b>FALSE</b>, the function will not recurse, defaults to <b>TRUE</b></p>
+     * @param boolean $r [optional] <p>When set to <b>FALSE</b>, the function will not recurse, defaults to <b>TRUE</b></p>
      * @return boolean <b>FALSE</b> if something goes wrong
      */
     public function fetchFeedSubmissions($r = true){
@@ -342,7 +344,7 @@ class AmazonFeedList extends AmazonFeedsCore implements \Iterator{
      * Parses XML response into array.
      * 
      * This is what reads the response XML and converts it into an array.
-     * @param SimpleXMLObject $xml <p>The XML response from Amazon.</p>
+     * @param SimpleXMLElement $xml <p>The XML response from Amazon.</p>
      * @return boolean <b>FALSE</b> if no XML data is found
      */
     protected function parseXML($xml){
@@ -363,6 +365,13 @@ class AmazonFeedList extends AmazonFeedsCore implements \Iterator{
             $this->feedList[$i]['FeedType'] = (string)$x->FeedType;
             $this->feedList[$i]['SubmittedDate'] = (string)$x->SubmittedDate;
             $this->feedList[$i]['FeedProcessingStatus'] = (string)$x->FeedProcessingStatus;
+            //this fields are not always returned
+            if (isset($x->StartedProcessingDate)) {
+                $this->feedList[$i]['StartedProcessingDate'] = (string)$x->StartedProcessingDate;
+            }
+            if (isset($x->CompletedProcessingDate)) {
+                $this->feedList[$i]['CompletedProcessingDate'] = (string)$x->CompletedProcessingDate;
+            }
             
             $this->index++;
         }
@@ -540,6 +549,38 @@ class AmazonFeedList extends AmazonFeedsCore implements \Iterator{
     }
     
     /**
+     * Returns the date that the specified entry started being processed.
+     *
+     * This method will return <b>FALSE</b> if the list has not yet been filled.
+     * The time will be in the ISO8601 date format.
+     * @param int $i [optional] <p>List index to retrieve the value from. Defaults to 0.</p>
+     * @return string|boolean single value, or <b>FALSE</b> if Non-numeric index
+     */
+    public function getDateStarted($i = 0){
+        if (is_numeric($i) && isset($this->feedList) && is_array($this->feedList) && isset($this->feedList[$i]['StartedProcessingDate'])){
+            return $this->feedList[$i]['StartedProcessingDate'];
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * Returns the date that the specified entry finished being processed.
+     *
+     * This method will return <b>FALSE</b> if the list has not yet been filled.
+     * The time will be in the ISO8601 date format.
+     * @param int $i [optional] <p>List index to retrieve the value from. Defaults to 0.</p>
+     * @return string|boolean single value, or <b>FALSE</b> if Non-numeric index
+     */
+    public function getDateCompleted($i = 0){
+        if (is_numeric($i) && isset($this->feedList) && is_array($this->feedList) && isset($this->feedList[$i]['CompletedProcessingDate'])){
+            return $this->feedList[$i]['CompletedProcessingDate'];
+        } else {
+            return false;
+        }
+    }
+
+    /**
      * Returns the full info for the specified entry.
      * 
      * This method will return <b>FALSE</b> if the list has not yet been filled.
@@ -549,6 +590,8 @@ class AmazonFeedList extends AmazonFeedsCore implements \Iterator{
      * <li><b>FeedType</b> - feed type for the feed submission</li>
      * <li><b>SubmittedDate</b> - time in ISO8601 date format</li>
      * <li><b>FeedProcessingStatus</b> - see <i>setFeedStatuses</i> for a list of possible values</li>
+     * <li><b>StartedProcessingDate</b> - time in ISO8601 date format</li>
+     * <li><b>CompletedProcessingDate</b> - time in ISO8601 date format</li>
      * </ul>
      * @param int $i [optional] <p>List index to retrieve the value from. Defaults to 0.</p>
      * @return array|boolean array of values, or <b>FALSE</b> if Non-numeric index
@@ -626,6 +669,4 @@ class AmazonFeedList extends AmazonFeedsCore implements \Iterator{
     public function valid() {
         return isset($this->feedList[$this->i]);
     }
-    
 }
-?>

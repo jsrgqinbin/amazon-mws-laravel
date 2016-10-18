@@ -28,21 +28,20 @@ use Creacoon\AmazonMws\AmazonProductsCore;
  * optional parameters are also available for some of the functions.
  */
 class AmazonProductInfo extends AmazonProductsCore{
-    
-    
     /**
      * AmazonProductInfo fetches a list of info from Amazon.
      * 
      * The parameters are passed to the parent constructor, which are
      * in turn passed to the AmazonCore constructor. See it for more information
      * on these parameters and common methods.
-     * @param string $s <p>Name for the store you want to use.</p>
+     * @param string $s [optional] <p>Name for the store you want to use.
+     * This parameter is optional if only one store is defined in the config file.</p>
      * @param boolean $mock [optional] <p>This is a flag for enabling Mock Mode.
      * This defaults to <b>FALSE</b>.</p>
      * @param array|string $m [optional] <p>The files (or file) to use in Mock Mode.</p>
      * @param string $config [optional] <p>An alternate config file to set. Used for testing.</p>
      */
-    public function __construct($s, $mock = false, $m = null, $config = null){
+    public function __construct($s = null, $mock = false, $m = null, $config = null){
         parent::__construct($s, $mock, $m, $config);
     }
     
@@ -79,12 +78,14 @@ class AmazonProductInfo extends AmazonProductsCore{
      * Since seller SKU is a required parameter, these options should not be removed
      * without replacing them, so this method is not public.
      */
-    private function resetSKUs(){
+    protected function resetSKUs(){
         foreach($this->options as $op=>$junk){
             if(preg_match("#SellerSKUList#",$op)){
                 unset($this->options[$op]);
             }
         }
+        //remove Category-specific name
+        unset($this->options['SellerSKU']);
     }
     
     /**
@@ -120,12 +121,14 @@ class AmazonProductInfo extends AmazonProductsCore{
      * Since ASIN is a required parameter, these options should not be removed
      * without replacing them, so this method is not public.
      */
-    private function resetASINs(){
+    protected function resetASINs(){
         foreach($this->options as $op=>$junk){
             if(preg_match("#ASINList#",$op)){
                 unset($this->options[$op]);
             }
         }
+        //remove Category-specific name
+        unset($this->options['ASIN']);
     }
     
     /**
@@ -195,6 +198,7 @@ class AmazonProductInfo extends AmazonProductsCore{
         }
         
         $this->parseXML($xml);
+        
     }
     
     /**
@@ -276,6 +280,63 @@ class AmazonProductInfo extends AmazonProductsCore{
         } else if (array_key_exists('ASINList.ASIN.1',$this->options)){
             $this->options['Action'] = 'GetLowestOfferListingsForASIN';
             $this->resetSKUs();
+        }
+    }
+
+    /**
+     * Fetches a list of lowest offers on products from Amazon.
+     *
+     * Submits a <i>GetLowestPricedOffersForSKU</i>
+     * or <i>GetLowestPricedOffersForASIN</i> request to Amazon. Amazon will send
+     * the list back as a response, which can be retrieved using <i>getProduct</i>.
+     * @return boolean <b>FALSE</b> if something goes wrong
+     */
+    public function fetchLowestPricedOffers(){
+        if (!array_key_exists('SellerSKUList.SellerSKU.1',$this->options) && !array_key_exists('ASINList.ASIN.1',$this->options)){
+            $this->log("Product IDs must be set in order to look them up!",'Warning');
+            return false;
+        }
+
+        $this->prepareLowestPriced();
+
+        $url = $this->urlbase.$this->urlbranch;
+
+        $query = $this->genQuery();
+
+        if ($this->mockMode){
+           $xml = $this->fetchMockFile();
+        } else {
+            $response = $this->sendRequest($url, array('Post'=>$query));
+
+            if (!$this->checkResponse($response)){
+                return false;
+            }
+
+            $xml = simplexml_load_string($response['body']);
+        }
+
+        $this->parseXML($xml);
+    }
+
+    /**
+     * Sets up options for using <i>fetchLowestPricedOffers</i>.
+     *
+     * This changes key options for using <i>fetchLowestPricedOffers</i>.
+     */
+    protected function prepareLowestPriced(){
+        include($this->env);
+        if(isset($THROTTLE_TIME_PRODUCTPRICE)) {
+            $this->throttleTime = $THROTTLE_TIME_PRODUCTPRICE;
+        }
+        $this->throttleGroup = 'GetLowestPricedOfferListings';
+        if (array_key_exists('SellerSKUList.SellerSKU.1',$this->options)){
+            $this->options['Action'] = 'GetLowestPricedOffersForSKU';
+            $this->resetASINs();
+            $this->options['SellerSKU'] = $this->options['SellerSKUList.SellerSKU.1'];
+        } else if (array_key_exists('ASINList.ASIN.1',$this->options)){
+            $this->options['Action'] = 'GetLowestPricedOffersForASIN';
+            $this->resetSKUs();
+            $this->options['ASIN'] = $this->options['ASINList.ASIN.1'];
         }
     }
     
@@ -394,11 +455,11 @@ class AmazonProductInfo extends AmazonProductsCore{
         if (array_key_exists('SellerSKUList.SellerSKU.1',$this->options)){
             $this->options['Action'] = 'GetProductCategoriesForSKU';
             $this->resetASINs();
+            $this->options['SellerSKU'] = $this->options['SellerSKUList.SellerSKU.1'];
         } else if (array_key_exists('ASINList.ASIN.1',$this->options)){
             $this->options['Action'] = 'GetProductCategoriesForASIN';
             $this->resetSKUs();
+            $this->options['ASIN'] = $this->options['ASINList.ASIN.1'];
         }
     }
-    
 }
-?>

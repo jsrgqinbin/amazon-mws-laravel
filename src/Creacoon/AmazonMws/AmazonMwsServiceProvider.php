@@ -66,5 +66,4 @@ class AmazonMwsServiceProvider extends ServiceProvider {
 	{
 		return array();
 	}
-
 }
